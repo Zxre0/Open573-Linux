@@ -135,10 +135,16 @@ python3 tools/set-mode.py scaled
 ~/.local/bin/gc573-preview
 ```
 
-The selection is saved for the installed boot service. On a cold start, the
-normal checked HDMI preparation runs first; the service then enables the
-combined profile. Cold boot, repeated 60↔120 changes and physical hotplug in
-this mode still need broader hardware validation. Use `python3 tools/set-mode.py capture` to return to
+The selection is saved for the installed boot service. Since 0.47.0 a cold
+boot loads the driver **once, directly in scaled mode**: the boot service runs
+the checked startup up to phase 6, then the module finishes HDMI setup in the
+background whenever the source turns on and enables the combined profile
+without a reload. Capture apps such as GC573 Preview or OBS can stay open
+while the console is off. (Before 0.47.0 the driver loaded in capture mode and
+reloaded once HDMI was ready, which an open capture app blocked.) Switching
+from an already loaded capture driver still reloads once HDMI is up. Repeated
+60↔120 changes and physical hotplug in this mode still need broader hardware
+validation. Use `python3 tools/set-mode.py capture` to return to
 the conservative 1080p source profile.
 
 On PS5, disable HDCP and HDR/VRR, select **1440p**, run **Test 1440p Output**, and

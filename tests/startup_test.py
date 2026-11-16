@@ -194,6 +194,26 @@ class StartupTest(TestCase):
         self.assertEqual(startup.read_checkpoint()['next'], 6)
         self.assertTrue(startup.read_checkpoint()['pending'])
 
+    def test_scaled_cold_start_loads_scaled_once_without_waiting_for_hdmi(self):
+        result = dict(READY, scaled_capture='1', hdmi_deferred='1')
+        with mock.patch.object(startup, 'STATUS') as status, mock.patch.object(startup, 'step', side_effect=[{}, {'bar0[0x00000040]': '0x0001f850'}, result]) as step, mock.patch.object(startup, 'run_phase') as phase:
+            status.exists.return_value = False
+            status.read_text.return_value = 'scaled_capture=1\nhdmi_ready=0\nhdmi_deferred=1'
+            startup.initialize_scaled()
+        self.assertEqual([c.args[0] for c in phase.call_args_list], [mode for mode, _ in startup.PHASES[:6]])
+        # One module load at the phase-6 handoff; no later --scaled-video reload.
+        self.assertEqual([c.args[0] for c in step.call_args_list], ['--fpga-status', '--board-state', '--capture-wait-scaled'])
+        self.assertEqual(step.call_args.kwargs['scaled_capture'], 1)
+        self.assertEqual(startup.read_checkpoint()['next'], 6)
+        self.assertTrue(startup.read_checkpoint()['pending'])
+
+    def test_scaled_resume_after_phase_six_keeps_two_step_start(self):
+        startup.save_checkpoint(9)
+        with mock.patch.object(startup, 'STATUS') as status, mock.patch.object(startup, 'step', side_effect=[{}, {'bar0[0x00000040]': '0x0001f958'}, dict(READY, hdmi_deferred='1')]) as step, mock.patch.object(startup, 'run_phase'):
+            status.exists.return_value = False
+            startup.initialize(scaled=True)
+        self.assertEqual(step.call_args.args[0], '--capture-wait')
+
     def test_experimental_cold_plan_hands_off_six_before_restricted_video(self):
         result=dict(READY, capture_experimental_144hz='1', scaled_capture='1')
         with mock.patch.object(startup, 'STATUS') as status, mock.patch.object(startup, 'step', side_effect=[{}, {'bar0[0x00000040]':'0x0001f850'}, result]) as step, mock.patch.object(startup, 'run_phase') as phase:

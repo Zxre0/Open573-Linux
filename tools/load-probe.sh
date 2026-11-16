@@ -68,6 +68,7 @@ case ${1:-} in
     --start-passthrough) identity_read=1; auto_start=1; auto_passthrough=1; shift ;;
     --scaled-video) identity_read=1; video_capture=1; scaled_capture=1; shift ;;
     --scaled-video-144hz) identity_read=1; video_capture=1; scaled_capture=1; experimental_144hz=1; experimental_parameters=(experimental_144hz=1); shift ;;
+    --capture-wait-scaled) identity_read=1; video_capture=1; scaled_capture=1; hdmi_deferred=1; shift ;;
     --capture-wait-144hz) identity_read=1; video_capture=1; scaled_capture=1; hdmi_deferred=1; experimental_144hz=1; experimental_parameters=(experimental_144hz=1); shift ;;
     --passthrough-video) identity_read=1; video_capture=1; passthrough_only=1; shift ;;
     --sink-edid) identity_read=1; sink_read=1; shift ;;
