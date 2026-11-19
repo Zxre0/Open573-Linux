@@ -190,15 +190,18 @@ def initialize_scaled():
             raise RuntimeError('Scaled capture stopped; inspect its diagnostics before retrying')
         print('Scaled capture is already loaded; preserving the device.')
         return
-    initialize(False)
+    initialize(False, scaled=True)
     current = fields(STATUS.read_text())
+    if number(current, 'scaled_capture'):
+        return  # A cold start loaded scaled capture directly.
+    # A capture-mode driver that was already loaded is switched once HDMI is up.
     if current.get('hdmi_ready') != '1':
         raise WaitingForSignal('Waiting for the initial HDMI setup before enabling scaled capture')
     step('--scaled-video', capture_video_registered=1, scaled_capture=1,
          capture_error=0, led_error=0)
 
 
-def initialize(passthrough=False, experimental_144hz=False):
+def initialize(passthrough=False, experimental_144hz=False, scaled=False):
     current = fields(STATUS.read_text()) if STATUS.exists() else {}
     if experimental_144hz and number(current, 'capture_video_registered'):
         if not number(current, 'capture_experimental_144hz'):
@@ -276,6 +279,11 @@ def initialize(passthrough=False, experimental_144hz=False):
                 elif passthrough:
                     step('--passthrough-video', capture_video_registered=1, passthrough_only=1,
                          led_error=0, led_rgb_complete=1)
+                elif scaled and index == 6:
+                    # Load scaled capture once; the module finishes HDMI setup
+                    # whenever the source appears, so no reload is needed later.
+                    step('--capture-wait-scaled', capture_error=0, capture_video_registered=1,
+                         led_error=0, led_rgb_complete=1, hdmi_deferred=1, scaled_capture=1)
                 else:
                     step('--capture-wait', capture_error=0, capture_video_registered=1,
                          led_error=0, led_rgb_complete=1, hdmi_deferred=1)

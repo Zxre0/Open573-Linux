@@ -477,7 +477,10 @@ static void gc573_hdmi_work(struct work_struct *work)
 	int ret;
 	if (scaled_capture) {
 		gc573_control_lock(card);
-		ret = experimental_144hz && hdmi_start_phase ?
+		/* A cold start finishes the checked HDMI phases 6..13 here,
+		 * then enables the scaled profile without reloading the module.
+		 */
+		ret = hdmi_start_phase ?
 			gc573_hdmi_prepare_capture(&card->hdmi_io, &card->hdmi) : 1;
 		if (ret == 1)
 			ret = gc573_combined_poll(card);
@@ -1579,8 +1582,9 @@ static int gc573_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	if (experimental_144hz && (!scaled_capture || !capture_video ||
 	    (hdmi_start_phase && hdmi_start_phase != GC573_HDMI_FIRST)))
 		return -EINVAL;
+	/* Scaled capture may continue a cold start from the phase-6 handoff. */
 	if ((passthrough_only || scaled_capture) && (!capture_video ||
-	    (hdmi_start_phase && !experimental_144hz) ||
+	    (hdmi_start_phase && (passthrough_only || hdmi_start_phase != GC573_HDMI_FIRST)) ||
 	    (passthrough_only && scaled_capture)))
 		return -EINVAL;
 	if (hdmi_start_phase && (!capture_video || hdmi_start_phase < GC573_HDMI_FIRST ||
@@ -1939,4 +1943,4 @@ module_pci_driver(gc573_driver);
 MODULE_DESCRIPTION("Original GC573 native HDMI capture and diagnostics");
 MODULE_AUTHOR("GC573 native development");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.46.5");
+MODULE_VERSION("0.47.0");
